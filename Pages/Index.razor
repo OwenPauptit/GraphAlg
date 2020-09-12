@@ -1,0 +1,102 @@
+﻿@page "/"
+@inject IJSRuntime JSRuntime
+
+
+
+@for (int i = 0; i <= Graph.EdgeList.Edges.Count() - 1; i++)
+{
+    <svg width="2000" height="1000" style="position: absolute; left: 0px; top: 0px; z-index:-1">
+        <line x1="@((int)Graph.EdgeList.Edges[i].Node1.Position.X)" y1="@((int)Graph.EdgeList.Edges[i].Node1.Position.Y)" x2="@((int)Graph.EdgeList.Edges[i].Node2.Position.X)" y2="@((int)Graph.EdgeList.Edges[i].Node2.Position.Y)" stroke="@Graph.EdgeList.Edges[i].Colour"></line>
+    </svg>
+    int local = i;
+    string style = "position: absolute; left: " + (int)((Graph.EdgeList.Edges[i].Node1.Position.X + Graph.EdgeList.Edges[i].Node2.Position.X) / 2) + "px; top: " + (int)((Graph.EdgeList.Edges[i].Node1.Position.Y + Graph.EdgeList.Edges[i].Node2.Position.Y) / 2) + "px";
+    <input class="edge-weight" type="text" @bind="Graph.EdgeList.Edges[local].Weight" style="@style" />
+}
+
+@foreach (var node in Graph.NodeList.Nodes)
+{
+    <span class="dot" @onclick="@((args) => NodeClick(args, node))" @onmousemove="node.Drag" style="position: absolute; z-index: 5; @node.Style"></span>
+}
+
+<div class="buttons">
+    <ul>
+        <li>
+            <button @onclick="Graph.AddNode">Add Node</button>
+        </li>
+        <li>
+            <button @onclick="AddEdge">Add Edge</button>
+        </li>
+        <li>
+            <button @onclick="Graph.Clear">Clear</button>
+        </li>
+        <li>
+            <button @onclick="Graph.ColourNodes">Colour</button>
+        </li>
+        <li>
+            <button @onclick="Graph.ResetColours">Reset Colours</button>
+        </li>
+        @if (Graph.isConnected())
+        {
+            <li>
+                <button @onclick="Graph.EdgeList.GenerateST">Generate ST</button>
+            </li>
+            <li>
+                <button @onclick="Graph.EdgeList.GenerateMST">Generate MST</button>
+            </li>
+        }
+    </ul>
+</div>
+
+
+@code{
+
+    private Graph Graph = new Graph();
+
+    private bool makingEdge = false;
+    private Edge newEdge = new Edge();
+
+    private void AddEdge()
+    {
+        makingEdge = true;
+    }
+
+    private void NodeClick(MouseEventArgs e, Node node)
+    {
+        if (makingEdge)
+        {
+            if (newEdge.Node1 == null)
+            {
+                newEdge.Node1 = node;
+            }
+            else
+            {
+                newEdge.Node2 = node;
+                Graph.AddEdge(newEdge);
+                newEdge = new Edge();
+                makingEdge = false;
+            }
+        }
+        else
+        {
+            node.Click();
+        }
+    }
+
+    [JSInvokable("Rerender")]
+    public void Rerender()
+    {
+        this.StateHasChanged();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if (firstRender)
+        {
+            var dotNetReference = DotNetObjectReference.Create(this);
+            JSRuntime.InvokeVoidAsync("jsTimer", dotNetReference);
+        }
+    }
+
+
+}
